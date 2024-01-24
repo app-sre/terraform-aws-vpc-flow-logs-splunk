@@ -4,13 +4,13 @@ This module configures a Kinesis Firehose, sets up a subscription for a desired 
 
 The Lambda function used is the one provided for AWS by Splunk: https://github.com/splunk/splunk-aws-firehose-flowlogs-processor
 
-## Usage example
+## Usage
 
 * Make sure your local Python interpreter is 3.8.x. This is what is currently targeted by splunk-aws-firehose-flowlogs-processo program.
 * Call the module, e.g.:
 ```
 module "vpc_flow_logs_to_splunk" {
-  source          = "github.com/app-sre/terraform-aws-vpc-flow-logs-splunk:v<your x.y.z>"
+  source          = "github.com/app-sre/terraform-aws-vpc-flow-logs-splunk?ref=v<your x.y.z>"
   vpc_id          = "<your vpc_id>
   vpc_name        = "<your vpc_name>"
   hec_token       = "<KMS encrypted Splunk HEC token>"
