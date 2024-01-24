@@ -1,9 +1,8 @@
 name: terraform-fmt
 on:
-  push:
-    branches: ["main"]
   pull_request:
-    branches: ["main"]
+  push:
+    branches: [main]
 
 jobs:
   validate:
