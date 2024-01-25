@@ -4,6 +4,24 @@ variable "cloudwatch_log_retention" {
   default     = 30
 }
 
+variable "firehose_splunk_retry_duration" {
+  description = "Firehose delivery retry duration (between 0 and 7200)."
+  type        = number
+  default     = 300
+}
+
+variable "flow_log_max_aggregation_interval" {
+  description = "The maximum interval of time (60 or 600 s) during which a flow of packets is captured and aggregated into a flow log record. Select the minimum setting of 60s interval if you need the flow log data to be available for near-real-time analysis in Splunk."
+  type        = number
+  default     = 60
+}
+
+variable "hec_acknowledgment_timeout" {
+  description = "The amount of time, in seconds between 180 and 600, that Kinesis Firehose waits to receive an acknowledgment from Splunk after it sends it data."
+  type        = string
+  default     = 300
+}
+
 variable "hec_token" {
   description = "KMS encoded Splunk hec token"
   type        = string
@@ -45,6 +63,11 @@ variable "log_stream_name" {
   default     = "SplunkDelivery"
 }
 
+variable "s3_backup_mode" {
+  description = "Defines how documents should be delivered to Amazon S3."
+  type        = string
+  default     = "FailedEventsOnly"
+}
 variable "s3_compression_format" {
   description = "The compression format for what the Kinesis Firehose puts in the s3 bucket"
   type        = string
