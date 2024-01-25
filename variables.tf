@@ -13,7 +13,7 @@ variable "firehose_splunk_retry_duration" {
 variable "flow_log_max_aggregation_interval" {
   description = "The maximum interval of time (60 or 600 s) during which a flow of packets is captured and aggregated into a flow log record. Select the minimum setting of 60s interval if you need the flow log data to be available for near-real-time analysis in Splunk."
   type        = number
-  default     = 60
+  default     = 600
 }
 
 variable "hec_acknowledgment_timeout" {
