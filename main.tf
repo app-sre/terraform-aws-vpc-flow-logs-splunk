@@ -3,9 +3,11 @@ resource "aws_flow_log" "vpc" {
   log_destination_type     = "kinesis-data-firehose"
   traffic_type             = "ALL"
   vpc_id                   = var.vpc_id
-  max_aggregation_interval = 60
+  max_aggregation_interval = var.flow_log_max_aggregation_interval
 }
 
+# endpoint type is set to Raw since we're using the Splunk provider lambda to send data.
+# See https://aws.amazon.com/blogs/big-data/ingest-vpc-flow-logs-into-splunk-using-amazon-kinesis-data-firehose/
 resource "aws_kinesis_firehose_delivery_stream" "vpc_logs_to_splunk" {
   name        = "${var.vpc_name}-vpc-logs-to-splunk"
   destination = "splunk"
@@ -13,10 +15,10 @@ resource "aws_kinesis_firehose_delivery_stream" "vpc_logs_to_splunk" {
   splunk_configuration {
     hec_endpoint               = var.splunk_endpoint
     hec_token                  = module.hec_token_kms_secret.hec_token_kms_secret
-    hec_acknowledgment_timeout = 300
+    hec_acknowledgment_timeout = var.hec_acknowledgment_timeout
     hec_endpoint_type          = "Raw"
-    retry_duration             = 300
-    s3_backup_mode             = "FailedEventsOnly"
+    retry_duration             = var.firehose_splunk_retry_duration
+    s3_backup_mode             = var.s3_backup_mode
 
     s3_configuration {
       role_arn           = aws_iam_role.kinesis_firehose.arn
