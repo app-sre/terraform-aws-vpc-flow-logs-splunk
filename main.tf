@@ -106,8 +106,8 @@ resource "aws_cloudwatch_log_group" "kinesis" {
   retention_in_days = var.cloudwatch_log_retention
 
   tags = merge(
-    { managed_by_integration = "app-sre/infra" },
-    var.tags
+    var.tags,
+    var.log_group_tags,
   )
 }
 

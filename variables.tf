@@ -57,6 +57,12 @@ variable "lambda_processing_buffer_size_in_mb" {
   default     = 0.256
 }
 
+variable "log_group_tags" {
+  description = "A map of additional tags to add to all cloudwatch log groups"
+  type        = map(string)
+  default     = {}
+}
+
 variable "log_stream_name" {
   description = "Name of the CloudWatch log stream for Kinesis Firehose CloudWatch log group"
   type        = string
