@@ -97,12 +97,24 @@ variable "tags" {
   default     = {}
 }
 
+# vpc_name limited to the length of a vpc id, as it will be used if name not provided.
 variable "vpc_name" {
-  description = "Name of the vpc that we will send the flow logs to Splunk. It will be used in names, descriptions, etc..."
+  description = "Name of the vpc that we will send the flow logs to Splunk. It will be used in names, descriptions, etc... vpc_id will be used instead if not defined."
   type        = string
+  default     = ""
+
+  validation {
+    condition     = length(var.vpc_name) <= 21
+    error_message = "The vpc_name cannot be longer than 21 characters."
+  }
 }
 
 variable "vpc_id" {
   description = "VPC id"
   type        = string
+
+  validation {
+    condition     = length(var.vpc_id) <= 21
+    error_message = "The vpc_id cannot be longer than 21 characters."
+  }
 }

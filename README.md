@@ -12,7 +12,6 @@ The Lambda function used is the one provided for AWS by Splunk: https://github.c
 module "vpc_flow_logs_to_splunk" {
   source          = "github.com/app-sre/terraform-aws-vpc-flow-logs-splunk?ref=v<your x.y.z>"
   vpc_id          = "<your vpc_id>
-  vpc_name        = "<your vpc_name>"
   hec_token       = "<KMS encrypted Splunk HEC token>"
   splunk_endpoint = "<your Splunk endpoint>"
 }

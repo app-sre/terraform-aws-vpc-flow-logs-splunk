@@ -1,3 +1,8 @@
+locals {
+  name = length(var.vpc_name) > 0 ? var.vpc_name : var.vpc_id
+
+}
+
 resource "aws_flow_log" "vpc" {
   log_destination          = aws_kinesis_firehose_delivery_stream.vpc_logs_to_splunk.arn
   log_destination_type     = "kinesis-data-firehose"
@@ -9,7 +14,7 @@ resource "aws_flow_log" "vpc" {
 # endpoint type is set to Raw since we're using the Splunk provider lambda to send data.
 # See https://aws.amazon.com/blogs/big-data/ingest-vpc-flow-logs-into-splunk-using-amazon-kinesis-data-firehose/
 resource "aws_kinesis_firehose_delivery_stream" "vpc_logs_to_splunk" {
-  name        = "${var.vpc_name}-vpc-logs-to-splunk"
+  name        = "${local.name}-vpc-logs-to-splunk"
   destination = "splunk"
 
   splunk_configuration {
@@ -66,7 +71,7 @@ resource "aws_kinesis_firehose_delivery_stream" "vpc_logs_to_splunk" {
 
   tags = merge(
     {
-      Name               = "${var.vpc_name}-vpc-logs-to-splunk"
+      Name               = "${local.name}-vpc-logs-to-splunk"
       LogDeliveryEnabled = "true"
     },
     var.tags,
@@ -74,9 +79,9 @@ resource "aws_kinesis_firehose_delivery_stream" "vpc_logs_to_splunk" {
 }
 
 resource "aws_s3_bucket" "kinesis_firehose" {
-  bucket = "${var.vpc_name}-flow-logs"
+  bucket = "${local.name}-flow-logs"
   tags = merge(
-    { Name = "${var.vpc_name}-flow-logs" },
+    { Name = "${local.name}-flow-logs" },
     var.tags,
   )
 }
@@ -102,7 +107,7 @@ module "hec_token_kms_secret" {
 }
 
 resource "aws_cloudwatch_log_group" "kinesis" {
-  name              = "/aws/kinesisfirehose/${var.vpc_name}-vpc-logs-to-splunk"
+  name              = "/aws/kinesisfirehose/${local.name}-vpc-logs-to-splunk"
   retention_in_days = var.cloudwatch_log_retention
 
   tags = merge(
@@ -117,7 +122,7 @@ resource "aws_cloudwatch_log_stream" "kinesis" {
 }
 
 resource "aws_iam_role" "vpc_flow_logs_to_splunk_kinesis_firehose_lambda" {
-  name        = "${var.vpc_name}-vpc-flow-logs-to-splunk-kinesis-firehose-lambda"
+  name        = "${local.name}-vpc-flow-logs-to-splunk-firehose-lambda"
   description = "Role for Lambda function to transform VPC Flow Logs into Splunk compatible format"
 
   assume_role_policy = jsonencode({
@@ -134,7 +139,7 @@ resource "aws_iam_role" "vpc_flow_logs_to_splunk_kinesis_firehose_lambda" {
   })
 
   inline_policy {
-    name = "${var.vpc_name}-vpc-flow-logs-to-splunk-kinesis-firehose-lambda"
+    name = "${local.name}-vpc-flow-logs-to-splunk-firehose-lambda"
 
     policy = jsonencode({
       Version = "2012-10-17"
@@ -153,7 +158,7 @@ resource "aws_iam_role" "vpc_flow_logs_to_splunk_kinesis_firehose_lambda" {
   }
 
   tags = merge(
-    { Name = "${var.vpc_name}-vpc-flow-logs-to-splunk-kinesis-firehose-lambda" },
+    { Name = "${local.name}-vpc-flow-logs-to-splunk-kinesis-firehose-lambda" },
     var.tags,
   )
 }
@@ -193,8 +198,8 @@ resource "aws_lambda_function" "splunk_firehose_flowlogs_processor" {
 }
 
 resource "aws_iam_role" "kinesis_firehose" {
-  name        = "${var.vpc_name}-vpc-flow-logs-to-splunk-kinesis-firehose"
-  description = "IAM Role for Kinesis Firehose to send ${var.vpc_name} vpc flow logs to splunk"
+  name        = "${local.name}-vpc-flow-logs-to-splunk-kinesis-firehose"
+  description = "IAM Role for Kinesis Firehose to send ${local.name} vpc flow logs to splunk"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -210,7 +215,7 @@ resource "aws_iam_role" "kinesis_firehose" {
   })
 
   inline_policy {
-    name = "${var.vpc_name}-vpc-flow-logs-to-splunk-kinesis-firehose"
+    name = "${local.name}-vpc-flow-logs-to-splunk-kinesis-firehose"
 
     policy = jsonencode({
       Version = "2012-10-17"
@@ -245,7 +250,7 @@ resource "aws_iam_role" "kinesis_firehose" {
   }
 
   tags = merge(
-    { Name = "${var.vpc_name}-vpc-flow-logs-to-splunk-kinesis-firehose" },
+    { Name = "${local.name}-vpc-flow-logs-to-splunk-kinesis-firehose" },
     var.tags,
   )
 }
