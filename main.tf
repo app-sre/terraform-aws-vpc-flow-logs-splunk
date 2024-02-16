@@ -19,7 +19,7 @@ resource "aws_kinesis_firehose_delivery_stream" "vpc_logs_to_splunk" {
 
   splunk_configuration {
     hec_endpoint               = var.splunk_endpoint
-    hec_token                  = module.hec_token_kms_secret.hec_token_kms_secret
+    hec_token                  = var.hec_token
     hec_acknowledgment_timeout = var.hec_acknowledgment_timeout
     hec_endpoint_type          = "Raw"
     retry_duration             = var.firehose_splunk_retry_duration
@@ -98,12 +98,6 @@ resource "aws_s3_bucket_acl" "kinesis_firehose" {
   bucket     = aws_s3_bucket.kinesis_firehose.id
   acl        = "private"
   depends_on = [aws_s3_bucket_ownership_controls.kinesis_firehose]
-}
-
-module "hec_token_kms_secret" {
-  source    = "disney/kinesis-firehose-splunk/aws//modules/kms_secrets"
-  hec_token = var.hec_token
-  version   = "8.1.0" # this cannot be set in a variable, see https://github.com/hashicorp/terraform/issues/28912
 }
 
 resource "aws_cloudwatch_log_group" "kinesis" {

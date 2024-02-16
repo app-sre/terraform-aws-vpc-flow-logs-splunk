@@ -23,8 +23,10 @@ variable "hec_acknowledgment_timeout" {
 }
 
 variable "hec_token" {
-  description = "KMS encoded Splunk hec token"
+  description = "Pass the HEC token in plain text (not recommended) or through a parameter store, through a KMS encryption module, etc..."
   type        = string
+  default     = null
+  sensitive   = true
 }
 
 variable "kinesis_firehose_buffer" {

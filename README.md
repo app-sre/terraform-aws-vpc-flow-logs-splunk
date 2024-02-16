@@ -7,15 +7,21 @@ The Lambda function used is the one provided for AWS by Splunk: https://github.c
 ## Usage
 
 * Make sure your local Python interpreter is 3.8.x. This is what is currently targeted by splunk-aws-firehose-flowlogs-processo program.
+* The following example uses KMS to encrypt the HEC token. You can use that or whatever mechanism you have to avoid storing the HEC token in plain text, e.g. a parameter store.
 * Call the module, e.g.:
-```
-module "vpc_flow_logs_to_splunk" {
-  source          = "github.com/app-sre/terraform-aws-vpc-flow-logs-splunk?ref=v<your x.y.z>"
-  vpc_id          = "<your vpc_id>
-  hec_token       = "<KMS encrypted Splunk HEC token>"
-  splunk_endpoint = "<your Splunk endpoint>"
-}
-```
+    ```
+    module "hec_token_kms_secret" {
+      source    = "disney/kinesis-firehose-splunk/aws//modules/kms_secrets"
+      hec_token = "<KMS encrypted Splunk HEC token>"
+    }
+
+    module "vpc_flow_logs_to_splunk" {
+      source          = "github.com/app-sre/terraform-aws-vpc-flow-logs-splunk?ref=v<your x.y.z>"
+      vpc_id          = "<your vpc_id>
+      hec_token       = module.hec_token_kms_secret.hec_token_kms_secret
+      splunk_endpoint = "<your Splunk endpoint>"
+    }
+    ```
 
 ## Credits
 
