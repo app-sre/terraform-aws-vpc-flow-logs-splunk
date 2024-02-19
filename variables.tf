@@ -25,7 +25,6 @@ variable "hec_acknowledgment_timeout" {
 variable "hec_token" {
   description = "Pass the HEC token in plain text (not recommended) or through a parameter store, through a KMS encryption module, etc..."
   type        = string
-  default     = null
   sensitive   = true
 }
 
