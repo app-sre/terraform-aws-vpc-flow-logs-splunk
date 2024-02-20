@@ -1,3 +1,0 @@
-[submodule "splunk-aws-firehose-flowlogs-processor"]
-	path = splunk-aws-firehose-flowlogs-processor
-	url = https://github.com/splunk/splunk-aws-firehose-flowlogs-processor

@@ -1,12 +1,11 @@
 # Send VPC Flow logs to Splunk via Kinesis Firehose
 
-This module configures a Kinesis Firehose, sets up a subscription for a desired CloudWatch Log Group to the Firehose, and sends the log data to Splunk. A Lambda function is required to transform the VPC Log data to a format compatible with Splunk. This module takes care of configuring this Lambda function.
+This module configures a Kinesis Firehose, sets up a subscription for a desired CloudWatch Log Group to the Firehose, and sends the log data to Splunk.
 
-The Lambda function used is the one provided for AWS by Splunk: https://github.com/splunk/splunk-aws-firehose-flowlogs-processor
+According to [AWS Big Data Blog](https://aws.amazon.com/blogs/big-data/ingest-vpc-flow-logs-into-splunk-using-amazon-kinesis-data-firehose/), a Lambda is no longer required to transform the VPC flow logs according to the 7.3.0 version in Splunk AWS Add-on, hence this module does not contain any Lambda processing any more. If you need to send data to a Splunk system with an older Add-on, please take a look to v0.1.0 of this module.
 
 ## Usage
 
-* Make sure your local Python interpreter is 3.8.x. This is what is currently targeted by splunk-aws-firehose-flowlogs-processo program.
 * The following example uses KMS to encrypt the HEC token. You can use that or whatever mechanism you have to avoid storing the HEC token in plain text, e.g. a parameter store.
 * Call the module, e.g.:
     ```
@@ -23,6 +22,8 @@ The Lambda function used is the one provided for AWS by Splunk: https://github.c
     }
     ```
 
+
+
 ## Credits
 
-A good deal of inspiration on how to work with Firehose and Lambdas provided by a similar module: [Send CloudWatch Logs to Splunk via Kinesis Firehose](https://github.com/disney/terraform-aws-kinesis-firehose-splunk)
+A good deal of inspiration on how to work with Firehose provided by a similar module: [Send CloudWatch Logs to Splunk via Kinesis Firehose](https://github.com/disney/terraform-aws-kinesis-firehose-splunk)
