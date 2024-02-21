@@ -119,3 +119,9 @@ variable "vpc_id" {
     error_message = "The vpc_id cannot be longer than 21 characters."
   }
 }
+
+variable "log_format" {
+  description = "(Optional) The fields to include in the flow log record."
+  type        = string
+  default     = "$${version} $${account-id} $${interface-id} $${srcaddr} $${dstaddr} $${srcport} $${dstport} $${protocol} $${packets} $${bytes} $${start} $${end} $${action} $${log-status}"
+}

@@ -9,6 +9,7 @@ resource "aws_flow_log" "vpc" {
   traffic_type             = "ALL"
   vpc_id                   = var.vpc_id
   max_aggregation_interval = var.flow_log_max_aggregation_interval
+  log_format               = var.log_format
 }
 
 # Endpoint type is set to Raw
