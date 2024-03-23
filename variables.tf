@@ -40,24 +40,6 @@ variable "kinesis_firehose_buffer_interval" {
   default     = 400
 }
 
-variable "lambda_function_timeout" {
-  description = "The function execution time at which Lambda should terminate the function."
-  type        = number
-  default     = 180
-}
-
-variable "lambda_processing_buffer_interval_in_seconds" {
-  description = "Lambda processing buffer interval in seconds."
-  type        = number
-  default     = 61 # If 60 is the default, it is not stored in state and there are perpetual changes in the plan
-}
-
-variable "lambda_processing_buffer_size_in_mb" {
-  description = "Lambda processing buffer size in mb."
-  type        = number
-  default     = 0.256
-}
-
 variable "log_group_tags" {
   description = "A map of additional tags to add to all cloudwatch log groups"
   type        = map(string)
