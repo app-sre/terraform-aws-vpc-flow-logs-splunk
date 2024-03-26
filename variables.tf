@@ -1,3 +1,7 @@
+variable "cloudwatch_log_group_prefix" {
+  type = string
+}
+
 variable "cloudwatch_log_retention" {
   description = "Length in days to keep CloudWatch logs of Kinesis Firehose."
   type        = number
@@ -10,12 +14,6 @@ variable "firehose_splunk_retry_duration" {
   default     = 300
 }
 
-variable "flow_log_max_aggregation_interval" {
-  description = "The maximum interval of time (60 or 600 s) during which a flow of packets is captured and aggregated into a flow log record. Select the minimum setting of 60s interval if you need the flow log data to be available for near-real-time analysis in Splunk."
-  type        = number
-  default     = 600
-}
-
 variable "hec_acknowledgment_timeout" {
   description = "The amount of time, in seconds between 180 and 600, that Kinesis Firehose waits to receive an acknowledgment from Splunk after it sends it data."
   type        = string
@@ -26,6 +24,7 @@ variable "hec_token" {
   description = "Pass the HEC token in plain text (not recommended) or through a parameter store, through a KMS encryption module, etc..."
   type        = string
   sensitive   = true
+  nullable = false
 }
 
 variable "kinesis_firehose_buffer" {
@@ -52,6 +51,10 @@ variable "log_stream_name" {
   default     = "SplunkDelivery"
 }
 
+variable "name" {
+  type = string
+}
+
 variable "s3_backup_mode" {
   description = "Defines how documents should be delivered to Amazon S3."
   type        = string
@@ -72,38 +75,11 @@ variable "s3_prefix" {
 variable "splunk_endpoint" {
   description = "Splunk endpoint"
   type        = string
+  nullable = false
 }
 
 variable "tags" {
   description = "A map of tags to add to all resources"
   type        = map(string)
   default     = {}
-}
-
-# vpc_name limited to the length of a vpc id, as it will be used if name not provided.
-variable "vpc_name" {
-  description = "Name of the vpc that we will send the flow logs to Splunk. It will be used in names, descriptions, etc... vpc_id will be used instead if not defined."
-  type        = string
-  default     = ""
-
-  validation {
-    condition     = length(var.vpc_name) <= 21
-    error_message = "The vpc_name cannot be longer than 21 characters."
-  }
-}
-
-variable "vpc_id" {
-  description = "VPC id"
-  type        = string
-
-  validation {
-    condition     = length(var.vpc_id) <= 21
-    error_message = "The vpc_id cannot be longer than 21 characters."
-  }
-}
-
-variable "log_format" {
-  description = "(Optional) The fields to include in the flow log record."
-  type        = string
-  default     = "$${version} $${account-id} $${interface-id} $${srcaddr} $${dstaddr} $${srcport} $${dstport} $${protocol} $${packets} $${bytes} $${start} $${end} $${action} $${log-status}"
 }
