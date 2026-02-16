@@ -19,6 +19,15 @@ v0.1.0 of this module.
 
 [AWS Big Data Blog URL]: https://aws.amazon.com/blogs/big-data/ingest-vpc-flow-logs-into-splunk-using-amazon-kinesis-data-firehose
 
+## Destination Types
+
+This module supports two destination types for sending data to Splunk:
+
+* **splunk** (default): Uses the native Splunk destination with HEC Raw endpoint
+* **http_endpoint**: Uses the generic HTTP endpoint destination, useful when sending data through a proxy or load balancer
+
+Both destination types use the same `splunk_endpoint` and `hec_token` variables.
+
 ## Usage
 
 * Example for handling multiple VPCs:
@@ -35,6 +44,17 @@ v0.1.0 of this module.
       hec_token       = var.hec_token
       splunk_endpoint = "<your Splunk endpoint>"
       source          = "github.com/app-sre/terraform-aws-vpc-flow-logs-splunk?<x.y.z>"
+    }
+    ```
+
+* Example using HTTP endpoint destination:
+    ```
+    module "vpc_flow_logs_to_splunk" {
+      source           = "github.com/app-sre/terraform-aws-vpc-flow-logs-splunk?ref=v<x.y.z>"
+      vpc_id           = "<your vpc_id>"
+      hec_token        = var.hec_token
+      splunk_endpoint  = "<your Splunk endpoint>"
+      destination_type = "http_endpoint"
     }
     ```
 **Notice:** Do *not* keep the HEC token as clear text in the configuration!

@@ -23,7 +23,7 @@ variable "hec_acknowledgment_timeout" {
 }
 
 variable "hec_token" {
-  description = "Pass the HEC token in plain text (not recommended) or through a parameter store, through a KMS encryption module, etc..."
+  description = "Splunk HEC token. Pass it in plain text (not recommended) or through a parameter store, through a KMS encryption module, etc."
   type        = string
   sensitive   = true
 }
@@ -52,11 +52,18 @@ variable "log_stream_name" {
   default     = "SplunkDelivery"
 }
 
-variable "s3_backup_mode" {
-  description = "Defines how documents should be delivered to Amazon S3."
+variable "splunk_s3_backup_mode" {
+  description = "S3 backup mode for Splunk destination: FailedEventsOnly or AllEvents"
   type        = string
   default     = "FailedEventsOnly"
 }
+
+variable "http_endpoint_s3_backup_mode" {
+  description = "S3 backup mode for HTTP endpoint destination: FailedDataOnly or AllData"
+  type        = string
+  default     = "FailedDataOnly"
+}
+
 variable "s3_compression_format" {
   description = "The compression format for what the Kinesis Firehose puts in the s3 bucket"
   type        = string
@@ -70,7 +77,7 @@ variable "s3_prefix" {
 }
 
 variable "splunk_endpoint" {
-  description = "Splunk endpoint"
+  description = "Splunk endpoint URL."
   type        = string
 }
 
@@ -106,4 +113,42 @@ variable "log_format" {
   description = "(Optional) The fields to include in the flow log record."
   type        = string
   default     = "$${version} $${account-id} $${interface-id} $${srcaddr} $${dstaddr} $${srcport} $${dstport} $${protocol} $${packets} $${bytes} $${start} $${end} $${action} $${log-status}"
+}
+
+variable "destination_type" {
+  description = "Firehose destination type: splunk or http_endpoint"
+  type        = string
+  default     = "splunk"
+
+  validation {
+    condition     = contains(["splunk", "http_endpoint"], var.destination_type)
+    error_message = "destination_type must be 'splunk' or 'http_endpoint'"
+  }
+}
+
+variable "http_endpoint_name" {
+  description = "HTTP endpoint name"
+  type        = string
+  default     = "Splunk HTTP Endpoint"
+}
+
+variable "http_endpoint_retry_duration" {
+  description = "Total time in seconds for retries (0-7200)"
+  type        = number
+  default     = 300
+}
+
+variable "http_endpoint_content_encoding" {
+  description = "Content encoding: GZIP or NONE"
+  type        = string
+  default     = "GZIP"
+}
+
+variable "http_endpoint_common_attributes" {
+  description = "List of common attributes (name/value pairs) sent with each request"
+  type = list(object({
+    name  = string
+    value = string
+  }))
+  default = []
 }

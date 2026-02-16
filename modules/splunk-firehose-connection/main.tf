@@ -1,6 +1,7 @@
 # Endpoint type is set to Raw
 # See https://aws.amazon.com/blogs/big-data/ingest-vpc-flow-logs-into-splunk-using-amazon-kinesis-data-firehose/
 resource "aws_kinesis_firehose_delivery_stream" "logs_to_splunk" {
+  count       = var.destination_type == "splunk" ? 1 : 0
   name        = var.name
   destination = "splunk"
 
@@ -10,7 +11,59 @@ resource "aws_kinesis_firehose_delivery_stream" "logs_to_splunk" {
     hec_acknowledgment_timeout = var.hec_acknowledgment_timeout
     hec_endpoint_type          = "Raw"
     retry_duration             = var.firehose_splunk_retry_duration
-    s3_backup_mode             = var.s3_backup_mode
+    s3_backup_mode             = var.splunk_s3_backup_mode
+
+    s3_configuration {
+      role_arn           = aws_iam_role.kinesis_firehose.arn
+      bucket_arn         = aws_s3_bucket.kinesis_firehose.arn
+      prefix             = var.s3_prefix
+      buffering_size     = var.kinesis_firehose_buffer
+      buffering_interval = var.kinesis_firehose_buffer_interval
+      compression_format = var.s3_compression_format
+    }
+
+    cloudwatch_logging_options {
+      enabled         = true
+      log_group_name  = aws_cloudwatch_log_group.kinesis.name
+      log_stream_name = aws_cloudwatch_log_stream.kinesis.name
+    }
+  }
+
+  tags = merge(
+    {
+      Name               = var.name
+      LogDeliveryEnabled = "true"
+    },
+    var.tags,
+  )
+}
+
+resource "aws_kinesis_firehose_delivery_stream" "logs_to_http_endpoint" {
+  count       = var.destination_type == "http_endpoint" ? 1 : 0
+  name        = "${var.name}-via-http-endpoint"
+  destination = "http_endpoint"
+
+  http_endpoint_configuration {
+    url                = var.splunk_endpoint
+    name               = var.http_endpoint_name
+    access_key         = var.hec_token
+    s3_backup_mode     = var.http_endpoint_s3_backup_mode
+    buffering_size     = var.kinesis_firehose_buffer
+    buffering_interval = var.kinesis_firehose_buffer_interval
+    retry_duration     = var.http_endpoint_retry_duration
+    role_arn           = aws_iam_role.kinesis_firehose.arn
+
+    request_configuration {
+      content_encoding = var.http_endpoint_content_encoding
+
+      dynamic "common_attributes" {
+        for_each = var.http_endpoint_common_attributes
+        content {
+          name  = common_attributes.value.name
+          value = common_attributes.value.value
+        }
+      }
+    }
 
     s3_configuration {
       role_arn           = aws_iam_role.kinesis_firehose.arn
