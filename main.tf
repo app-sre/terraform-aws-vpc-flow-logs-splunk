@@ -24,9 +24,15 @@ module "vpc_logs_to_splunk" {
   kinesis_firehose_buffer_interval = var.kinesis_firehose_buffer_interval
   log_group_tags                   = var.log_group_tags
   log_stream_name                  = var.log_stream_name
-  s3_backup_mode                   = var.s3_backup_mode
+  splunk_s3_backup_mode            = var.splunk_s3_backup_mode
+  http_endpoint_s3_backup_mode     = var.http_endpoint_s3_backup_mode
   s3_compression_format            = var.s3_compression_format
   s3_prefix                        = var.s3_prefix
   splunk_endpoint                  = var.splunk_endpoint
   tags                             = var.tags
+  destination_type                 = var.destination_type
+  http_endpoint_name               = var.http_endpoint_name
+  http_endpoint_retry_duration     = var.http_endpoint_retry_duration
+  http_endpoint_content_encoding   = var.http_endpoint_content_encoding
+  http_endpoint_common_attributes  = var.http_endpoint_common_attributes
 }
