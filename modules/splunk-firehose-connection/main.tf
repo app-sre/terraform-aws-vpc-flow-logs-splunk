@@ -144,33 +144,33 @@ resource "aws_iam_role" "kinesis_firehose" {
     ]
   })
 
-  inline_policy {
-    name = var.name
-
-    policy = jsonencode({
-      Version = "2012-10-17"
-      Statement = [
-        {
-          Effect = "Allow",
-          Action = [
-            "s3:AbortMultipartUpload",
-            "s3:GetBucketLocation",
-            "s3:GetObject",
-            "s3:ListBucket",
-            "s3:ListBucketMultipartUploads",
-            "s3:PutObject",
-          ],
-          Resource = [
-            aws_s3_bucket.kinesis_firehose.arn,
-            "${aws_s3_bucket.kinesis_firehose.arn}/*",
-          ]
-        },
-      ]
-    })
-  }
-
   tags = merge(
     { Name = var.name },
     var.tags,
   )
+}
+
+resource "aws_iam_role_policy" "kinesis_firehose" {
+  name = var.name
+  role = aws_iam_role.kinesis_firehose.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "s3:AbortMultipartUpload",
+          "s3:GetBucketLocation",
+          "s3:GetObject",
+          "s3:ListBucket",
+          "s3:ListBucketMultipartUploads",
+          "s3:PutObject",
+        ],
+        Resource = [
+          aws_s3_bucket.kinesis_firehose.arn,
+          "${aws_s3_bucket.kinesis_firehose.arn}/*",
+        ]
+      },
+    ]
+  })
 }
