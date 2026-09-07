@@ -28,6 +28,7 @@ module "vpc_logs_to_splunk" {
   http_endpoint_s3_backup_mode     = var.http_endpoint_s3_backup_mode
   s3_compression_format            = var.s3_compression_format
   s3_prefix                        = var.s3_prefix
+  s3_lifecycle_expiration_days     = var.s3_lifecycle_expiration_days
   splunk_endpoint                  = var.splunk_endpoint
   tags                             = var.tags
   destination_type                 = var.destination_type
