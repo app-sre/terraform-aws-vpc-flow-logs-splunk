@@ -82,8 +82,8 @@ variable "s3_lifecycle_expiration_days" {
   default     = 90
 
   validation {
-    condition     = var.s3_lifecycle_expiration_days > 0
-    error_message = "s3_lifecycle_expiration_days must be a positive number."
+    condition     = var.s3_lifecycle_expiration_days > 0 && floor(var.s3_lifecycle_expiration_days) == var.s3_lifecycle_expiration_days
+    error_message = "s3_lifecycle_expiration_days must be a positive whole number of days."
   }
 }
 
