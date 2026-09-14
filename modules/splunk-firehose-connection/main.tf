@@ -111,7 +111,7 @@ resource "aws_s3_bucket_versioning" "kinesis_firehose" {
   bucket = aws_s3_bucket.kinesis_firehose.id
 
   versioning_configuration {
-    status = "Enabled"
+    status = var.s3_versioning_enabled ? "Enabled" : "Suspended"
   }
 }
 
@@ -142,12 +142,13 @@ resource "aws_s3_bucket_lifecycle_configuration" "kinesis_firehose" {
       days = var.s3_lifecycle_expiration_days
     }
 
-    # Short, and deliberately NOT var.s3_lifecycle_expiration_days: on a
-    # versioned bucket, the expiration above doesn't delete the object -
+    # Short, and deliberately NOT var.s3_lifecycle_expiration_days: when
+    # versioning is enabled, the expiration above doesn't delete the object -
     # it adds a delete marker and demotes the object to a noncurrent
     # version. This purges the actual bytes shortly after, so real
     # retention stays close to s3_lifecycle_expiration_days instead of
-    # roughly double it.
+    # roughly double it. No-op when s3_versioning_enabled is false, since
+    # there are no noncurrent versions to purge on an unversioned bucket.
     noncurrent_version_expiration {
       noncurrent_days = 1
     }
