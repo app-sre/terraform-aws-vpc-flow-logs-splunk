@@ -28,6 +28,19 @@ This module supports two destination types for sending data to Splunk:
 
 Both destination types use the same `splunk_endpoint` and `hec_token` variables.
 
+## Security
+
+The Kinesis Firehose backup S3 bucket (used for failed events / backup data, per `splunk_s3_backup_mode` / `http_endpoint_s3_backup_mode`) is hardened by default:
+
+* **Public access blocked** — all four S3 public access block settings are enabled.
+* **Versioned** — object versioning is enabled by default (`s3_versioning_enabled`, default `true`). It isn't needed by Firehose itself; it exists to satisfy policy-as-code guardrails that require versioning on every S3 bucket, so it can be turned off (`false`) if you don't need that.
+* **Encrypted** — server-side encryption (SSE-S3 / `AES256`) is always enabled.
+* **Lifecycle-managed** — objects expire after `s3_lifecycle_expiration_days` (default `90`); if `s3_versioning_enabled` is `true`, the underlying data is fully removed shortly after that rather than exactly on it. Incomplete multipart uploads are aborted after 7 days.
+
+Public access blocking, encryption, and lifecycle management are not optional — this bucket only ever holds log/backup data, so there's no supported way to disable those. `s3_lifecycle_expiration_days` (retention window) and `s3_versioning_enabled` are configurable.
+
+**Upgrading an existing deployment:** the lifecycle rule applies by object age, not by when the rule was added — pre-existing objects already older than `s3_lifecycle_expiration_days` will be expired on the next daily lifecycle evaluation after upgrading. If you use `splunk_s3_backup_mode`/`http_endpoint_s3_backup_mode = AllEvents`/`AllData` and rely on this bucket as a long-term archive rather than just failed-event backup, review its contents before upgrading.
+
 ## Usage
 
 * Example for handling multiple VPCs:

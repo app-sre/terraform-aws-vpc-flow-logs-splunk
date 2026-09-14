@@ -76,6 +76,23 @@ variable "s3_prefix" {
   default     = "kinesis-firehose/"
 }
 
+variable "s3_lifecycle_expiration_days" {
+  description = "Number of days after which objects in the Kinesis Firehose backup S3 bucket expire. If s3_versioning_enabled is true, the underlying data is fully removed shortly after this many days rather than exactly on it."
+  type        = number
+  default     = 90
+
+  validation {
+    condition     = var.s3_lifecycle_expiration_days > 0 && floor(var.s3_lifecycle_expiration_days) == var.s3_lifecycle_expiration_days
+    error_message = "s3_lifecycle_expiration_days must be a positive whole number of days."
+  }
+}
+
+variable "s3_versioning_enabled" {
+  description = "Whether to enable object versioning on the Kinesis Firehose backup S3 bucket. Not needed by Firehose itself - it exists to satisfy policy-as-code guardrails (e.g. Conftest against policies/s3.rego) that require versioning on every S3 bucket. Defaults to true so the module passes those guardrails out of the box; set to false to opt out."
+  type        = bool
+  default     = true
+}
+
 variable "splunk_endpoint" {
   description = "Splunk endpoint URL."
   type        = string

@@ -98,6 +98,82 @@ resource "aws_s3_bucket" "kinesis_firehose" {
   )
 }
 
+resource "aws_s3_bucket_public_access_block" "kinesis_firehose" {
+  bucket = aws_s3_bucket.kinesis_firehose.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_versioning" "kinesis_firehose" {
+  bucket = aws_s3_bucket.kinesis_firehose.id
+
+  versioning_configuration {
+    status = var.s3_versioning_enabled ? "Enabled" : "Suspended"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "kinesis_firehose" {
+  bucket = aws_s3_bucket.kinesis_firehose.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "kinesis_firehose" {
+  # Must be created after versioning is applied (AWS provider docs);
+  # unrelated to this repo's "no depends_on in modules" convention.
+  depends_on = [aws_s3_bucket_versioning.kinesis_firehose]
+
+  bucket = aws_s3_bucket.kinesis_firehose.id
+
+  rule {
+    id     = "expire-old-backup-objects"
+    status = "Enabled"
+
+    filter {}
+
+    expiration {
+      days = var.s3_lifecycle_expiration_days
+    }
+
+    # Short, and deliberately NOT var.s3_lifecycle_expiration_days: when
+    # versioning is enabled, the expiration above doesn't delete the object -
+    # it adds a delete marker and demotes the object to a noncurrent
+    # version. This purges the actual bytes shortly after, so real
+    # retention stays close to s3_lifecycle_expiration_days instead of
+    # roughly double it. No-op when s3_versioning_enabled is false, since
+    # there are no noncurrent versions to purge on an unversioned bucket.
+    noncurrent_version_expiration {
+      noncurrent_days = 1
+    }
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+  }
+
+  # expiration.expired_object_delete_marker can't share a rule with
+  # expiration.days (the AWS API rejects that combination), so the stray
+  # delete marker left once the noncurrent version above is purged needs
+  # its own rule to actually get cleaned up.
+  rule {
+    id     = "remove-expired-delete-markers"
+    status = "Enabled"
+
+    filter {}
+
+    expiration {
+      expired_object_delete_marker = true
+    }
+  }
+}
+
 resource "aws_s3_bucket_ownership_controls" "kinesis_firehose" {
   bucket = aws_s3_bucket.kinesis_firehose.id
 
