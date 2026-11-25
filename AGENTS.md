@@ -13,7 +13,7 @@ terraform validate      # Validate configuration
 
 ## Architecture
 
-This Terraform module forwards VPC Flow Logs to Splunk via AWS Kinesis Firehose (no Lambda required).
+This repository provides Terraform modules that forward AWS logs to Splunk via Amazon Data Firehose (no Lambda required).
 
 ### Module Structure
 
@@ -23,6 +23,11 @@ This Terraform module forwards VPC Flow Logs to Splunk via AWS Kinesis Firehose 
   - S3 bucket for failed event backup
   - CloudWatch log group/stream for delivery monitoring
   - IAM role with S3 permissions for Firehose
+- **`modules/cloudwatch-logs-to-firehose/`**: Subscribes one existing CloudWatch log group to a dedicated Firehose stream with:
+  - Least-privilege CloudWatch Logs delivery role
+  - CloudWatch Logs decompression and message extraction
+  - Secrets Manager-backed Splunk HEC authentication
+  - Explicit source identity contract for Splunk HEC metadata
 
 ### Data Flow
 
@@ -31,9 +36,13 @@ VPC Flow Logs -> Kinesis Firehose -> Splunk HEC (Raw endpoint)
                       v
               S3 (failed events only, by default)
 
+RDS -> CloudWatch Logs -> subscription filter -> Data Firehose -> Splunk HEC
+                                                        |
+                                                        v
+                                                S3 (failed events)
+
 ### Requirements
 
-- Terraform >= 1.0
-- AWS Provider >= 5.0.0
+- Terraform >= 1.2
+- AWS Provider >= 5.59.0 and < 6.0.0
 - Splunk AWS Add-on >= 7.3.0
-

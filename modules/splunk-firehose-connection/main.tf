@@ -1,5 +1,11 @@
 # Endpoint type is set to Raw
 # See https://aws.amazon.com/blogs/big-data/ingest-vpc-flow-logs-into-splunk-using-amazon-kinesis-data-firehose/
+data "aws_region" "current" {}
+
+locals {
+  backup_bucket_name = coalesce(var.s3_bucket_name, var.name)
+}
+
 resource "aws_kinesis_firehose_delivery_stream" "logs_to_splunk" {
   count       = var.destination_type == "splunk" ? 1 : 0
   name        = var.name
@@ -12,6 +18,42 @@ resource "aws_kinesis_firehose_delivery_stream" "logs_to_splunk" {
     hec_endpoint_type          = "Raw"
     retry_duration             = var.firehose_splunk_retry_duration
     s3_backup_mode             = var.splunk_s3_backup_mode
+
+    dynamic "secrets_manager_configuration" {
+      for_each = var.splunk_secrets_manager_secret_arn == null ? [] : [var.splunk_secrets_manager_secret_arn]
+
+      content {
+        enabled    = true
+        role_arn   = aws_iam_role.kinesis_firehose.arn
+        secret_arn = secrets_manager_configuration.value
+      }
+    }
+
+    dynamic "processing_configuration" {
+      for_each = var.cloudwatch_logs_source ? [true] : []
+
+      content {
+        enabled = true
+
+        processors {
+          type = "Decompression"
+
+          parameters {
+            parameter_name  = "CompressionFormat"
+            parameter_value = "GZIP"
+          }
+        }
+
+        processors {
+          type = "CloudWatchLogProcessing"
+
+          parameters {
+            parameter_name  = "DataMessageExtraction"
+            parameter_value = "true"
+          }
+        }
+      }
+    }
 
     s3_configuration {
       role_arn           = aws_iam_role.kinesis_firehose.arn
@@ -26,6 +68,23 @@ resource "aws_kinesis_firehose_delivery_stream" "logs_to_splunk" {
       enabled         = true
       log_group_name  = aws_cloudwatch_log_group.kinesis.name
       log_stream_name = aws_cloudwatch_log_stream.kinesis.name
+    }
+  }
+
+  lifecycle {
+    precondition {
+      condition     = (var.hec_token == null) != (var.splunk_secrets_manager_secret_arn == null)
+      error_message = "Exactly one of hec_token or splunk_secrets_manager_secret_arn must be set for a Splunk destination."
+    }
+
+    precondition {
+      condition     = var.splunk_secrets_manager_secret_arn == null || split(":", var.splunk_secrets_manager_secret_arn)[3] == data.aws_region.current.name
+      error_message = "splunk_secrets_manager_secret_arn must be in the same AWS region as the Firehose stream."
+    }
+
+    precondition {
+      condition     = var.splunk_secrets_manager_kms_key_arn == null || (var.splunk_secrets_manager_secret_arn != null && split(":", var.splunk_secrets_manager_kms_key_arn)[3] == data.aws_region.current.name)
+      error_message = "splunk_secrets_manager_kms_key_arn requires a Secrets Manager credential and must be in the same AWS region as the Firehose stream."
     }
   }
 
@@ -88,10 +147,17 @@ resource "aws_kinesis_firehose_delivery_stream" "logs_to_http_endpoint" {
     },
     var.tags,
   )
+
+  lifecycle {
+    precondition {
+      condition     = !var.cloudwatch_logs_source
+      error_message = "cloudwatch_logs_source currently supports only the native Splunk destination. Add and test an HTTP destination adapter before using it for Sumo Logic."
+    }
+  }
 }
 
 resource "aws_s3_bucket" "kinesis_firehose" {
-  bucket = var.name
+  bucket = local.backup_bucket_name
   tags = merge(
     { Name = var.name },
     var.tags,
@@ -231,7 +297,7 @@ resource "aws_iam_role_policy" "kinesis_firehose" {
   role = aws_iam_role.kinesis_firehose.id
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
+    Statement = concat([
       {
         Effect = "Allow",
         Action = [
@@ -247,6 +313,40 @@ resource "aws_iam_role_policy" "kinesis_firehose" {
           "${aws_s3_bucket.kinesis_firehose.arn}/*",
         ]
       },
-    ]
+      ],
+      var.splunk_secrets_manager_secret_arn == null ? [] : [
+        {
+          Effect = "Allow"
+          Action = [
+            "secretsmanager:GetSecretValue",
+          ]
+          Resource = [
+            var.splunk_secrets_manager_secret_arn,
+          ]
+        },
+      ],
+      var.splunk_secrets_manager_kms_key_arn == null ? [] : [
+        {
+          Effect = "Allow"
+          Action = [
+            "kms:Decrypt",
+          ]
+          Resource = [
+            var.splunk_secrets_manager_kms_key_arn,
+          ]
+        },
+      ],
+      [
+        {
+          Effect = "Allow"
+          Action = [
+            "logs:PutLogEvents",
+          ]
+          Resource = [
+            "${aws_cloudwatch_log_group.kinesis.arn}:log-stream:${aws_cloudwatch_log_stream.kinesis.name}",
+          ]
+        },
+      ],
+    )
   })
 }

@@ -22,9 +22,41 @@ variable "hec_acknowledgment_timeout" {
 }
 
 variable "hec_token" {
-  description = "Splunk HEC token. Pass it in plain text (not recommended) or through a parameter store, through a KMS encryption module, etc."
+  description = "Splunk HEC token. Prefer splunk_secrets_manager_secret_arn for new deployments so the token is not stored in Terraform state. Exactly one credential source must be set for a Splunk destination."
   type        = string
   sensitive   = true
+  default     = null
+  nullable    = true
+}
+
+variable "splunk_secrets_manager_secret_arn" {
+  description = "ARN of an AWS Secrets Manager secret containing the Splunk HEC token. Exactly one of this variable or hec_token must be set for a Splunk destination."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition     = var.splunk_secrets_manager_secret_arn == null || can(regex("^arn:[^:]+:secretsmanager:[^:]+:[0-9]{12}:secret:.+$", var.splunk_secrets_manager_secret_arn))
+    error_message = "splunk_secrets_manager_secret_arn must be a Secrets Manager secret ARN when set."
+  }
+}
+
+variable "splunk_secrets_manager_kms_key_arn" {
+  description = "Optional customer-managed KMS key ARN used to encrypt the Splunk HEC secret. When set, the Firehose role receives kms:Decrypt for this key."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition     = var.splunk_secrets_manager_kms_key_arn == null || can(regex("^arn:[^:]+:kms:[^:]+:[0-9]{12}:key/.+$", var.splunk_secrets_manager_kms_key_arn))
+    error_message = "splunk_secrets_manager_kms_key_arn must be a KMS key ARN when set."
+  }
+}
+
+variable "cloudwatch_logs_source" {
+  description = "Whether Firehose receives gzip-compressed CloudWatch Logs subscription records. Enables decompression and message extraction for the Splunk destination."
+  type        = bool
+  default     = false
 }
 
 variable "kinesis_firehose_buffer" {
@@ -77,6 +109,13 @@ variable "s3_prefix" {
   description = "Prefix for the kinesis firehose related bucket."
   type        = string
   default     = "kinesis-firehose/"
+}
+
+variable "s3_bucket_name" {
+  description = "Optional globally unique name for the Firehose backup bucket. Defaults to name for backward compatibility."
+  type        = string
+  default     = null
+  nullable    = true
 }
 
 variable "s3_lifecycle_expiration_days" {

@@ -1,11 +1,20 @@
-# Forward VPC Flow logs to Splunk via AWS Firehose
+# Forward AWS logs to Splunk via Amazon Data Firehose
 
-This module configures a Kinesis Firehose, sets up a subscription for a desired 
-CloudWatch Log Group to the Firehose, and sends the log data to Splunk.
+This repository contains:
+
+* The root VPC Flow Logs module, which sends VPC Flow Logs directly to Firehose.
+* `modules/cloudwatch-logs-to-firehose`, which subscribes one existing CloudWatch
+  log group to a dedicated Firehose stream and sends its events to Splunk.
+* `modules/splunk-firehose-connection`, the shared low-level Firehose connection.
+
+The CloudWatch Logs module enables Firehose decompression and message extraction.
+CloudWatch Logs sends gzip-compressed envelopes; Splunk requires the extracted
+messages rather than those envelopes.
 
 # Prerequisites
 
-* Terraform >= 1.0.0
+* Terraform >= 1.2.0
+* AWS provider >= 5.59.0 and < 6.0.0
 * [Splunk AWS Add-on][Splunk AWS Add-on URL] >= 7.3.0
 
 [Splunk AWS Add-on URL]: https://docs.splunk.com/Documentation/AddOns/released/AWS
@@ -27,6 +36,112 @@ This module supports two destination types for sending data to Splunk:
 * **http_endpoint**: Uses the generic HTTP endpoint destination, useful when sending data through a proxy or load balancer
 
 Both destination types use the same `splunk_endpoint` and `hec_token` variables.
+
+The root VPC module retains both destination types. The CloudWatch Logs module
+currently supports only the native Splunk destination. Its interface keeps the
+source identity separate from the destination so a tested Sumo Logic HTTP
+adapter can be added later without changing the CloudWatch subscription model.
+
+## CloudWatch Logs to Splunk
+
+Use one module instance per independently identifiable log source. The source
+log group must already exist; for RDS PostgreSQL it is normally created by the
+consumer configuration before enabling `enabled_cloudwatch_logs_exports`.
+
+```hcl
+module "image_builder_database_logs" {
+  source = "github.com/app-sre/terraform-aws-vpc-flow-logs-splunk//modules/cloudwatch-logs-to-firehose?ref=v<x.y.z>"
+
+  name                      = "image-builder-prod-db-logs"
+  cloudwatch_log_group_name = "/aws/rds/instance/image-builder-prod/postgresql"
+
+  service_name = "image-builder"
+  environment  = "production"
+  source_id    = "aws:rds:us-east-1:123456789012:db:image-builder-prod/postgresql"
+
+  splunk_endpoint                   = "https://<splunk-hec-endpoint>:8088"
+  splunk_secrets_manager_secret_arn = aws_secretsmanager_secret.splunk_hec.arn
+  splunk_index                      = "<approved-index>"
+  splunk_sourcetype                 = "aws:rds:postgresql"
+  splunk_host                       = "image-builder-prod"
+
+  tags = {
+    ManagedBy = "Terraform"
+  }
+}
+```
+
+The Secrets Manager secret must contain the JSON object expected by Firehose:
+
+```json
+{
+  "hec_token": "<Splunk HEC token>"
+}
+```
+
+Do not commit the secret value or pass it as a Terraform input. The module grants
+the Firehose role `secretsmanager:GetSecretValue` only for the supplied secret.
+If the secret uses a customer-managed KMS key, also set
+`splunk_secrets_manager_kms_key_arn`.
+
+### Source identity contract
+
+Firehose message extraction deliberately removes CloudWatch envelope metadata.
+Use a dedicated HEC token for each module instance and configure these token
+defaults in Splunk:
+
+* `source`: the module's `source_id`
+* `sourcetype`: the module's `splunk_sourcetype`
+* `host`: the module's `splunk_host`
+* `index`: the module's `splunk_index`, with the token restricted to that index
+
+The `required_splunk_hec_metadata` output exposes the expected values for review
+and end-to-end verification. This contract prevents two database sources from
+becoming indistinguishable after message extraction.
+
+## Testing
+
+The mocked test suite requires Terraform >= 1.7; the modules themselves remain
+compatible with Terraform >= 1.2.
+
+Run repository checks from the repository root:
+
+```bash
+terraform fmt -check -recursive
+terraform init
+terraform validate -no-color
+terraform test -no-color
+```
+
+The native Terraform tests use a mocked AWS provider. They prove the resource
+graph, least-privilege delivery policy, credential validation, CloudWatch Logs
+processing configuration, and source metadata contract without contacting AWS.
+
+Static and mocked tests do not prove delivery. Before production rollout, deploy
+one non-production module instance and perform this end-to-end test:
+
+1. Confirm the RDS instance exports `postgresql` logs and the expected CloudWatch
+   log group receives a new event.
+2. Generate a database event containing a unique correlation ID without placing
+   credentials or sensitive data in the log message.
+3. Confirm the CloudWatch subscription reports no `DeliveryErrors` or
+   `DeliveryThrottling`.
+4. Confirm Firehose reports successful decompression and a successful
+   `DeliveryToSplunk` result, with no failed record under the backup S3 prefix.
+5. Search Splunk for the correlation ID and verify `index`, `source`,
+   `sourcetype`, and `host` against `required_splunk_hec_metadata`.
+6. Verify an authorized Rover-group member can search the event and an
+   unauthorized user cannot.
+7. Repeat for every required Event of Interest and for each database/module
+   instance.
+
+If delivery fails, retain the Firehose error log entry, relevant metric window,
+and redacted S3 failed-record metadata as evidence. Never include the HEC token
+or raw sensitive database content in test artifacts.
+
+See the complete [CloudWatch Logs to Splunk end-to-end validation runbook](docs/cloudwatch-logs-to-splunk-e2e.md)
+for account verification, deployment, event generation, AWS/Splunk checks,
+evidence requirements, failure triage, and rollback guidance.
 
 ## Security
 
